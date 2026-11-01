@@ -8,6 +8,7 @@ from pathlib import Path
 import unseen.detectors  # noqa: F401  (registers all detectors)
 from unseen.detectors.base import Page, Severity, all_detectors
 from unseen.fetcher import FetchError, fetch
+from unseen.report import render as print_report
 from unseen.scoring import MergedFinding, merge_findings
 
 EXIT_OK = 0
@@ -34,23 +35,6 @@ def scan_target(target: str) -> list[MergedFinding]:
 
 def overall(merged: list[MergedFinding]) -> Severity | None:
     return max((m.severity for m in merged), default=None)
-
-
-def print_report(target: str, merged: list[MergedFinding]) -> None:
-    print(f"unseen scan: {target}")
-    top = overall(merged)
-    if top is None:
-        print("No hidden content found.")
-        return
-    print(f"Overall severity: {top.name}  ({len(merged)} locations)\n")
-    for item in merged:
-        print(f"[{item.severity.name}] {item.location}")
-        print(f"    detectors: {', '.join(item.detectors)}")
-        for message in item.messages:
-            print(f"    - {message}")
-        if item.snippet:
-            print(f"    snippet: {item.snippet}")
-        print()
 
 
 def build_parser() -> argparse.ArgumentParser:
