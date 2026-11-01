@@ -9,29 +9,46 @@ Paste this file at the start of any new chat with Claude.
 - Keep tests, the SSRF guard and the benchmark. Never cut them.
 - Never deploy the web version before `net_guard.py` exists.
 - Update this file in the same commit as the code it describes.
+- Search the repo with `git grep -n <name>` before calling code unused.
 
-## Roadmap (compressed plan, launch around Nov 13-15)
-| Day | Dates | Work | Status |
-|---|---|---|---|
-| 1 | Nov 1-2 | Detectors 2-5, README | detectors DONE, README todo |
-| 2 | Nov 3 | Fixtures and pytest for all detectors | tests DONE, fixtures todo |
-| 3 | Nov 4 | Scanner, scoring, report, CLI: `unseen scan <url>` | mostly DONE (no report.py) |
-| 4 | Nov 5 | --sanitize, Playwright render, detector 6 | todo |
-| 5-6 | Nov 6-7 | FastAPI endpoint, React side-by-side UI | todo |
-| 7 | Nov 8 | net_guard.py (SSRF), rate limits, Docker | todo |
-| 8 | Nov 9 | Deploy to Oracle, HTTPS, open ports | todo |
-| 9-10 | Nov 10-11 | Benchmark, false-positive tuning, coverage | todo |
-| 11 | Nov 12 | README with GIF, PyPI, public repo, write-up | todo |
-| 12-13 | Nov 13-14 | Buffer | |
+## Roadmap
+| Step | Work | Status |
+|---|---|---|
+| 1 | README | DONE |
+| 2 | Fixtures (17 poisoned, 2 clean) plus test that runs every fixture | DONE |
+| 3 | report.py (rich output), used by cli.py | DONE |
+| 4 | Remove leftover TextExtractor and scan_html | DONE |
+| 4b | Normalize text and narrow patterns in instruction_patterns.py | DONE |
+| 5 | --sanitize (sanitize.py) | next |
+| 6 | Playwright render and detector 6 (visible vs. extracted diff) | todo |
+| 7 | FastAPI POST /scan | todo |
+| 8 | React + Tailwind side-by-side UI | todo |
+| 9 | net_guard.py (SSRF), rate limits, size and time limits | todo |
+| 10 | Docker and Caddy (HTTPS) | todo |
+| 11 | Deploy to Oracle, open ports 80/443 in security list and server firewall | todo |
+| 12 | Benchmark (15+ fixtures), false-positive tuning on real sites, coverage 80%+ | todo |
+| 13 | README with demo GIF, PyPI, public repo, write-up | todo |
+
+Target: launch around Nov 10-13 (about 3 days ahead of the compressed plan).
 
 ## Current state (Nov 1, verified)
 - 5 detectors registered: css_hiding, invisible_unicode, html_comments, hidden_attrs, instruction_patterns
-- fetcher.py exists (httpx, 10 s timeout, 2 MB cap, manual redirect loop with a validator hook for net_guard)
+- patterns.py: shared normalize() and find_instruction() used by detectors 2-4
+- instruction_patterns.py normalizes text first; role-spoofing and send-password patterns narrowed to avoid false positives
+- fetcher.py: httpx, 10 s timeout, 2 MB cap, manual redirect loop with a validator hook for net_guard
+- cli.py fetches only through fetcher.py (no urllib); local .html files also accepted
 - scoring.py merges findings by location; hiding + instruction on the same location = HIGH
-- cli.py: `unseen scan <target>`, `--json`, `--min-severity`, `--fail-on` (default high)
+- report.py: rich terminal output (same text as before, colors added)
+- `unseen scan <target>` with --json, --min-severity, --fail-on (default high)
 - Exit codes: 0 ok, 1 risk at or above --fail-on, 2 error
-- Verified: 23 tests passing, ruff clean
-- CI: GitHub Actions (Python 3.10 and 3.12), green
+- Fixtures: tests/make_fixtures.py generates tests/fixtures/poisoned, clean, expected.json
+- Verified: 55 tests passing, ruff clean, CI green on 3.10 and 3.12 up to the CLI fix
+
+## Known gaps
+- css_hiding ignores external stylesheets, media queries and selector specificity
+- Visible-text instructions are only reported at MEDIUM by detector 5
+- Phrase lists are English only
+- No real-site false-positive testing yet (step 12)
 
 ## Decisions
 - Environment: Windows, PowerShell, VS Code, venv in `.venv`, ruff line length 100
@@ -41,9 +58,6 @@ Paste this file at the start of any new chat with Claude.
 - Limits for the web version: 10 s timeout, 2 MB page cap, per-IP rate limit
 - Never put server IPs, keys or tokens in this file
 
-## Next steps, in order
-1. Short README (only what exists today)
-2. Fixtures plus a test that runs every fixture
-3. report.py, moved out of cli.py
-4. Delete leftover TextExtractor and scan_html in instruction_patterns.py
-5. --sanitize, then Playwright render and detector 6
+## Next step
+Step 5: sanitize.py and `--sanitize`. Output is a cleaned text version of the page with every flagged
+element and invisible character removed, safe to give a model.
