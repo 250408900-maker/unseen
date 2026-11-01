@@ -26,7 +26,11 @@ class MergedFinding:
 
 
 def merge_findings(findings: list[Finding]) -> list[MergedFinding]:
-    """Group findings by location, keep the top severity, list every detector."""
+    """Group findings by location, keep the top severity, list every detector.
+
+    If a hiding detector and instruction_patterns both fire on the same
+    location, the severity is raised to HIGH.
+    """
     groups: dict[str, list[Finding]] = {}
     for finding in findings:
         groups.setdefault(finding.location, []).append(finding)
@@ -36,10 +40,17 @@ def merge_findings(findings: list[Finding]) -> list[MergedFinding]:
         detectors = tuple(sorted({f.detector for f in group}))
         messages = tuple(dict.fromkeys(f.message for f in group))
         top = max(group, key=lambda f: f.severity)
+        severity = top.severity
+
+        has_instruction = "instruction_patterns" in detectors
+        has_hiding = any(name != "instruction_patterns" for name in detectors)
+        if has_instruction and has_hiding:
+            severity = Severity.HIGH
+
         merged.append(
             MergedFinding(
                 location=location,
-                severity=top.severity,
+                severity=severity,
                 detectors=detectors,
                 messages=messages,
                 snippet=top.snippet,

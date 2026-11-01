@@ -124,7 +124,13 @@ class InstructionPatterns(Detector):
             is_comment = isinstance(node, Comment)
             severity = Severity.HIGH if is_comment else Severity.MEDIUM
             where = "comment" if is_comment else "text"
-            location = f"{where} in {describe(parent)}" if parent else where
+
+            if parent is None:
+                location = where
+            elif is_comment:
+                location = f"comment in {describe(parent)}"
+            else:
+                location = describe(parent)
 
             for match in detect_instruction_patterns(text):
                 label = match.category.replace("_", " ").capitalize()
