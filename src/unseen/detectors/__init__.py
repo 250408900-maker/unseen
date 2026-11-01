@@ -4,4 +4,5 @@ from unseen.detectors import (  # noqa: F401
     html_comments,
     instruction_patterns,
     invisible_unicode,
+    render_diff,
 )

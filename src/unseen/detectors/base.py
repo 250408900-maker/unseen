@@ -6,9 +6,13 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+
+if TYPE_CHECKING:
+    from unseen.render import HiddenText
 
 
 class Severity(IntEnum):
@@ -57,6 +61,7 @@ class Page:
     url: str
     html: str
     soup: BeautifulSoup
+    hidden_text: list[HiddenText] | None = None  # filled by render.py when --render is used
 
     @classmethod
     def from_html(cls, html: str, url: str = "") -> Page:

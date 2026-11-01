@@ -8,6 +8,7 @@ from pathlib import Path
 import unseen.detectors  # noqa: F401  (registers all detectors)
 from unseen.detectors.base import Page, Severity, all_detectors
 from unseen.fetcher import FetchError, fetch
+from unseen.render import RenderError, render_hidden_text
 from unseen.report import render as print_report
 from unseen.sanitize import sanitize
 from unseen.scoring import MergedFinding, merge_findings
@@ -68,6 +69,12 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="FILE",
         help="write a cleaned text version of the page (hidden content removed) to FILE",
     )
+    scan.add_argument(
+        "--render",
+        action="store_true",
+        help="also render the page in a headless browser to catch hidden text that "
+        "static analysis misses (needs Playwright)",
+    )
     return parser
 
 
@@ -76,10 +83,15 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         page = load_page(args.target)
+        if args.render:
+            page.hidden_text = render_hidden_text(page.html)
         merged = scan_page(page)
         cleaned = sanitize(page) if args.sanitize else None
     except FetchError as error:
         print(f"unseen: could not fetch {args.target}: {error}", file=sys.stderr)
+        return EXIT_ERROR
+    except RenderError as error:
+        print(f"unseen: {error}", file=sys.stderr)
         return EXIT_ERROR
     except Exception as error:  # file or decoding problems
         print(f"unseen: could not scan {args.target}: {error}", file=sys.stderr)

@@ -7,13 +7,14 @@ def scan(html: str):
     return InstructionPatterns().scan(Page.from_html(html))
 
 
-def test_all_five_detectors_registered():
+def test_all_detectors_registered():
     assert set(REGISTRY) == {
         "css_hiding",
         "invisible_unicode",
         "html_comments",
         "hidden_attrs",
         "instruction_patterns",
+        "render_diff",
     }
 
 
