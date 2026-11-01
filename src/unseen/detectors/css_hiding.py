@@ -106,8 +106,9 @@ def hiding_reasons(tag: Tag, style: dict[str, str]) -> list[str]:
     if opacity is not None and opacity <= 0.01:
         reasons.append("opacity:0")
 
-    font_size = number(style.get("font-size", ""))
-    if font_size is not None and (font_size == 0 or (font_size <= 1 and "px" in style["font-size"])):
+    raw_size = style.get("font-size", "")
+    font_size = number(raw_size)
+    if font_size is not None and (font_size == 0 or (font_size <= 1 and "px" in raw_size)):
         reasons.append("font-size:0")
 
     indent = number(style.get("text-indent", ""))
@@ -121,9 +122,8 @@ def hiding_reasons(tag: Tag, style: dict[str, str]) -> list[str]:
                 reasons.append("off-screen position")
                 break
 
-    clip_value = style.get("clip", "").replace(" ", "")
     clip_path = style.get("clip-path", "").replace(" ", "")
-    if CLIP_RECT_RE.fullmatch(style.get("clip", "").strip()) or clip_value == "rect(0,0,0,0)":
+    if CLIP_RECT_RE.fullmatch(style.get("clip", "").strip()):
         reasons.append("clipped to nothing")
     elif clip_path.startswith(("inset(100%", "inset(50%")):
         reasons.append("clipped to nothing")
