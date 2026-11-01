@@ -10,10 +10,10 @@ from pathlib import Path
 
 import unseen.detectors  # noqa: F401  (registers all detectors)
 from unseen.detectors.base import Page, Severity, all_detectors
-from unseen.scoring import merge_findings, overall_severity
+from unseen.scoring import MergedFinding, merge_findings
 
-EXIT_CLEAN = 0
-EXIT_FOUND = 1
+EXIT_OK = 0
+EXIT_RISK = 1
 EXIT_ERROR = 2
 
 
@@ -28,20 +28,23 @@ def load_html(target: str) -> tuple[str, str]:
     return path.read_text(encoding="utf-8", errors="replace"), str(path)
 
 
-def scan_target(target: str):
+def scan_target(target: str) -> list[MergedFinding]:
     html, url = load_html(target)
     page = Page.from_html(html, url=url)
     findings = []
     for detector in all_detectors():
         findings.extend(detector.scan(page))
-    return findings
+    return merge_findings(findings)
 
 
-def print_report(target: str, findings) -> None:
-    merged = merge_findings(findings)
-    top = overall_severity(findings)
+def overall(merged: list[MergedFinding]) -> Severity | None:
+    return max((m.severity for m in merged), default=None)
+
+
+def print_report(target: str, merged: list[MergedFinding]) -> None:
     print(f"unseen scan: {target}")
-    if not merged:
+    top = overall(merged)
+    if top is None:
         print("No hidden content found.")
         return
     print(f"Overall severity: {top.name}  ({len(merged)} locations)\n")
@@ -55,41 +58,57 @@ def print_report(target: str, findings) -> None:
         print()
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="unseen",
         description="Find hidden text on a web page that humans cannot see but AI models can.",
     )
-    parser.add_argument("target", help="URL or path to an HTML file")
-    parser.add_argument("--json", action="store_true", help="print results as JSON")
-    parser.add_argument(
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    scan = commands.add_parser("scan", help="scan a URL or an HTML file")
+    scan.add_argument("target", help="URL or path to an HTML file")
+    scan.add_argument("--json", action="store_true", help="print results as JSON")
+    scan.add_argument(
         "--min-severity",
         choices=["low", "medium", "high"],
         default="low",
-        help="only report findings at or above this level",
+        help="only show findings at or above this level",
     )
-    args = parser.parse_args(argv)
+    scan.add_argument(
+        "--fail-on",
+        choices=["low", "medium", "high"],
+        default="high",
+        help="exit with code 1 if any finding is at or above this level (default: high)",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
 
     try:
-        findings = scan_target(args.target)
+        merged = scan_target(args.target)
     except Exception as error:  # network, file, or decoding problems
         print(f"unseen: could not scan {args.target}: {error}", file=sys.stderr)
         return EXIT_ERROR
 
-    minimum = Severity[args.min_severity.upper()]
-    findings = [f for f in findings if f.severity >= minimum]
+    fail_level = Severity[args.fail_on.upper()]
+    top = overall(merged)
+    failed = top is not None and top >= fail_level
+
+    shown = [m for m in merged if m.severity >= Severity[args.min_severity.upper()]]
 
     if args.json:
         output = {
             "target": args.target,
-            "overall": overall_severity(findings).name.lower() if findings else None,
-            "findings": [m.to_dict() for m in merge_findings(findings)],
+            "overall": top.name.lower() if top else None,
+            "findings": [m.to_dict() for m in shown],
         }
         print(json.dumps(output, indent=2))
     else:
-        print_report(args.target, findings)
+        print_report(args.target, shown)
 
-    return EXIT_FOUND if findings else EXIT_CLEAN
+    return EXIT_RISK if failed else EXIT_OK
 
 
 if __name__ == "__main__":
