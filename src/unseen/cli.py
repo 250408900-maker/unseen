@@ -1,15 +1,13 @@
-"""Command line interface: scan a URL or local HTML file."""
-
 from __future__ import annotations
 
 import argparse
 import json
 import sys
-import urllib.request
 from pathlib import Path
 
 import unseen.detectors  # noqa: F401  (registers all detectors)
 from unseen.detectors.base import Page, Severity, all_detectors
+from unseen.fetcher import FetchError, fetch
 from unseen.scoring import MergedFinding, merge_findings
 
 EXIT_OK = 0
@@ -17,20 +15,17 @@ EXIT_RISK = 1
 EXIT_ERROR = 2
 
 
-def load_html(target: str) -> tuple[str, str]:
-    """Return (html, url) for a URL or a local file path."""
+def load_page(target: str) -> Page:
+    """Return a Page for a URL (via fetcher.py) or a local file path."""
     if target.startswith(("http://", "https://")):
-        request = urllib.request.Request(target, headers={"User-Agent": "unseen/0.1"})
-        with urllib.request.urlopen(request, timeout=15) as response:
-            charset = response.headers.get_content_charset() or "utf-8"
-            return response.read().decode(charset, errors="replace"), target
+        return fetch(target)
     path = Path(target)
-    return path.read_text(encoding="utf-8", errors="replace"), str(path)
+    html = path.read_text(encoding="utf-8", errors="replace")
+    return Page.from_html(html, url=str(path))
 
 
 def scan_target(target: str) -> list[MergedFinding]:
-    html, url = load_html(target)
-    page = Page.from_html(html, url=url)
+    page = load_page(target)
     findings = []
     for detector in all_detectors():
         findings.extend(detector.scan(page))
@@ -88,7 +83,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         merged = scan_target(args.target)
-    except Exception as error:  # network, file, or decoding problems
+    except FetchError as error:
+        print(f"unseen: could not fetch {args.target}: {error}", file=sys.stderr)
+        return EXIT_ERROR
+    except Exception as error:  # file or decoding problems
         print(f"unseen: could not scan {args.target}: {error}", file=sys.stderr)
         return EXIT_ERROR
 
