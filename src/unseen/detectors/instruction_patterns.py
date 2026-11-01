@@ -2,11 +2,17 @@
 
 import re
 from dataclasses import dataclass
-from html.parser import HTMLParser
 
 from bs4.element import Comment
 
 from .base import Detector, Finding, Page, Severity, clip, describe, register
+from .patterns import normalize
+
+MODE_NAMES = (
+    r"developer|admin|administrator|debug|god|sudo|dan|jailbreak|unrestricted|unfiltered"
+)
+UNSAFE_PERSONAS = r"unrestricted|unfiltered|jailbroken|uncensored"
+DESTINATION = r"\b(?:to|at)\s+(?:https?://\S+|[\w.+-]+@[\w-]+\.[\w.-]+)"
 
 PATTERNS = {
     "instruction_override": [
@@ -15,14 +21,15 @@ PATTERNS = {
         r"\bforget (?:all |your )?(?:previous|prior) instructions\b",
     ],
     "role_spoofing": [
-        r"\byou are now (?:a |an )?\w+",
-        r"\bact as (?:a |an )?\w+",
+        rf"\byou are now (?:in )?(?:{MODE_NAMES}) mode\b",
+        rf"\byou are now (?:an? )?(?:{UNSAFE_PERSONAS}|evil)\b",
+        rf"\bact as (?:an? )?(?:{UNSAFE_PERSONAS}|system administrator)\b",
         r"\bsystem (?:message|prompt|instruction)\s*:",
     ],
     "secret_extraction": [
         r"\breveal (?:your |the )?(?:system prompt|secret|api key)\b",
-        r"\b(?:send|upload|forward|exfiltrate)\b.{0,100}"
-        r"\b(?:token|password|api key|credentials|secret)\b",
+        r"\b(?:send|upload|forward|exfiltrate)\b[^.\n]{0,80}"
+        r"\b(?:token|password|api key|credentials|secret)s?\b[^.\n]{0,60}" + DESTINATION,
     ],
     "concealment": [
         r"\bdo not (?:tell|inform|notify) the user\b",
@@ -49,7 +56,8 @@ class InstructionMatch:
 
 
 def detect_instruction_patterns(text: str) -> list[InstructionMatch]:
-    """Detect suspicious AI-directed instructions in text."""
+    """Detect suspicious AI-directed instructions in text (after normalization)."""
+    text = normalize(text)
     findings = []
     seen = set()
 
@@ -81,27 +89,6 @@ def detect_instruction_patterns(text: str) -> list[InstructionMatch]:
                 )
 
     return sorted(findings, key=lambda item: item.start)
-
-
-class TextExtractor(HTMLParser):
-    """Extract text from HTML, including hidden elements."""
-
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.parts = []
-
-    def handle_data(self, data):
-        self.parts.append(data)
-
-    def handle_comment(self, data):
-        self.parts.append(data)
-
-
-def scan_html(html: str) -> list[InstructionMatch]:
-    """Scan HTML text and comments for instruction patterns."""
-    parser = TextExtractor()
-    parser.feed(html)
-    return detect_instruction_patterns("\n".join(parser.parts))
 
 
 @register
