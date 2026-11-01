@@ -1,0 +1,133 @@
+{
+  "poisoned": [
+    {
+      "file": "poisoned/css_white_on_white.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/combo_display_none_instruction.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_offscreen.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_font_size_zero.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_opacity_zero.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_stylesheet_class.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/unicode_tag_chars.html",
+      "detectors": [
+        "invisible_unicode"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/unicode_zero_width_run.html",
+      "detectors": [
+        "invisible_unicode"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/unicode_bidi.html",
+      "detectors": [
+        "invisible_unicode"
+      ],
+      "min_severity": "medium"
+    },
+    {
+      "file": "poisoned/comment_instruction.html",
+      "detectors": [
+        "html_comments"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/comment_long.html",
+      "detectors": [
+        "html_comments"
+      ],
+      "min_severity": "low"
+    },
+    {
+      "file": "poisoned/attr_alt_instruction.html",
+      "detectors": [
+        "hidden_attrs"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/meta_instruction.html",
+      "detectors": [
+        "hidden_attrs"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/noscript_instruction.html",
+      "detectors": [
+        "hidden_attrs"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/aria_hidden_instruction.html",
+      "detectors": [
+        "hidden_attrs"
+      ],
+      "min_severity": "medium"
+    },
+    {
+      "file": "poisoned/hidden_input_exfil.html",
+      "detectors": [
+        "hidden_attrs"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/visible_instruction.html",
+      "detectors": [
+        "instruction_patterns"
+      ],
+      "min_severity": "low"
+    }
+  ],
+  "clean": [
+    {
+      "file": "clean/clean_article.html",
+      "max_severity": "none"
+    },
+    {
+      "file": "clean/clean_legit_hiding.html",
+      "max_severity": "low"
+    }
+  ]
+}
