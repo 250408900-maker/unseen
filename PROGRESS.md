@@ -19,8 +19,8 @@ Paste this file at the start of any new chat with Claude.
 | 3 | report.py (rich output), used by cli.py | DONE |
 | 4 | Remove leftover TextExtractor and scan_html | DONE |
 | 4b | Normalize text and narrow patterns in instruction_patterns.py | DONE |
-| 5 | --sanitize (sanitize.py) | next |
-| 6 | Playwright render and detector 6 (visible vs. extracted diff) | todo |
+| 5 | --sanitize (sanitize.py) | DONE |
+| 6 | Playwright render and detector 6 (visible vs. extracted diff) | next |
 | 7 | FastAPI POST /scan | todo |
 | 8 | React + Tailwind side-by-side UI | todo |
 | 9 | net_guard.py (SSRF), rate limits, size and time limits | todo |
@@ -39,10 +39,13 @@ Target: launch around Nov 10-13 (about 3 days ahead of the compressed plan).
 - cli.py fetches only through fetcher.py (no urllib); local .html files also accepted
 - scoring.py merges findings by location; hiding + instruction on the same location = HIGH
 - report.py: rich terminal output (same text as before, colors added)
-- `unseen scan <target>` with --json, --min-severity, --fail-on (default high)
+- `unseen scan <target>` with --json, --min-severity, --fail-on (default high), --sanitize FILE
 - Exit codes: 0 ok, 1 risk at or above --fail-on, 2 error
 - Fixtures: tests/make_fixtures.py generates tests/fixtures/poisoned, clean, expected.json
-- Verified: 55 tests passing, ruff clean, CI green on 3.10 and 3.12 up to the CLI fix
+- sanitize.py: removes CSS-hidden elements, aria-hidden elements with instructions, comments, script/style/noscript/head/meta, invisible Unicode; works on a fresh copy of the page
+- `unseen scan <target> --sanitize FILE` writes cleaned text to FILE; the summary line goes to stderr so --json stays valid
+- Visible instructions stay in the cleaned text (out of scope); zero-width joiners are stripped, which can split emoji sequences
+- Verified: 68 tests passing, ruff clean
 
 ## Known gaps
 - css_hiding ignores external stylesheets, media queries and selector specificity
@@ -59,5 +62,6 @@ Target: launch around Nov 10-13 (about 3 days ahead of the compressed plan).
 - Never put server IPs, keys or tokens in this file
 
 ## Next step
-Step 5: sanitize.py and `--sanitize`. Output is a cleaned text version of the page with every flagged
-element and invisible character removed, safe to give a model.
+Step 6: Playwright render and detector 6. Compare the text a human would see in a rendered page
+with the text a scraper extracts, and flag the gap. Playwright is optional (a CLI flag) and
+limited to one render at a time on the server.

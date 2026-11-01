@@ -9,6 +9,7 @@ import unseen.detectors  # noqa: F401  (registers all detectors)
 from unseen.detectors.base import Page, Severity, all_detectors
 from unseen.fetcher import FetchError, fetch
 from unseen.report import render as print_report
+from unseen.sanitize import sanitize
 from unseen.scoring import MergedFinding, merge_findings
 
 EXIT_OK = 0
@@ -25,12 +26,15 @@ def load_page(target: str) -> Page:
     return Page.from_html(html, url=str(path))
 
 
-def scan_target(target: str) -> list[MergedFinding]:
-    page = load_page(target)
+def scan_page(page: Page) -> list[MergedFinding]:
     findings = []
     for detector in all_detectors():
         findings.extend(detector.scan(page))
     return merge_findings(findings)
+
+
+def scan_target(target: str) -> list[MergedFinding]:
+    return scan_page(load_page(target))
 
 
 def overall(merged: list[MergedFinding]) -> Severity | None:
@@ -59,6 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="high",
         help="exit with code 1 if any finding is at or above this level (default: high)",
     )
+    scan.add_argument(
+        "--sanitize",
+        metavar="FILE",
+        help="write a cleaned text version of the page (hidden content removed) to FILE",
+    )
     return parser
 
 
@@ -66,7 +75,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     try:
-        merged = scan_target(args.target)
+        page = load_page(args.target)
+        merged = scan_page(page)
+        cleaned = sanitize(page) if args.sanitize else None
     except FetchError as error:
         print(f"unseen: could not fetch {args.target}: {error}", file=sys.stderr)
         return EXIT_ERROR
@@ -89,6 +100,19 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(output, indent=2))
     else:
         print_report(args.target, shown)
+
+    if cleaned is not None:
+        try:
+            Path(args.sanitize).write_text(cleaned.text + "\n", encoding="utf-8")
+        except OSError as error:
+            print(f"unseen: could not write {args.sanitize}: {error}", file=sys.stderr)
+            return EXIT_ERROR
+        print(
+            f"unseen: cleaned text written to {args.sanitize} "
+            f"({len(cleaned.removed)} hidden elements, {cleaned.comments_removed} comments, "
+            f"{cleaned.invisible_removed} invisible characters removed)",
+            file=sys.stderr,
+        )
 
     return EXIT_RISK if failed else EXIT_OK
 
