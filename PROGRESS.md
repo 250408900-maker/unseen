@@ -21,8 +21,8 @@ Paste this file at the start of any new chat with Claude.
 | 4b | Normalize text and narrow patterns in instruction_patterns.py | DONE |
 | 5 | --sanitize (sanitize.py) | DONE |
 | 6 | Playwright render (render.py), detector 6 (render_diff), --render flag | DONE |
-| 7 | FastAPI POST /scan | next |
-| 8 | React + Tailwind side-by-side UI | todo |
+| 7 | FastAPI POST /scan (api.py) | DONE |
+| 8 | React + Tailwind side-by-side UI | next |
 | 9 | net_guard.py (SSRF), rate limits, size and time limits | todo |
 | 10 | Docker and Caddy (HTTPS) | todo |
 | 11 | Deploy to Oracle, open ports 80/443 in security list and server firewall | todo |
@@ -31,7 +31,7 @@ Paste this file at the start of any new chat with Claude.
 
 Target: launch around Nov 10-13 (about 3 days ahead of the compressed plan).
 
-## Current state (Nov 1, verified)
+## Current state (Nov 2, verified)
 - 6 detectors registered: css_hiding, invisible_unicode, html_comments, hidden_attrs, instruction_patterns, render_diff
 - patterns.py: shared normalize() and find_instruction() used by detectors 2-4
 - instruction_patterns.py normalizes text first; role-spoofing and send-password patterns narrowed to avoid false positives
@@ -44,10 +44,14 @@ Target: launch around Nov 10-13 (about 3 days ahead of the compressed plan).
 - Fixtures: tests/make_fixtures.py generates tests/fixtures/poisoned, clean, expected.json
 - sanitize.py: removes CSS-hidden elements, aria-hidden elements with instructions, comments, script/style/noscript/head/meta, invisible Unicode; works on a fresh copy of the page
 - `--sanitize FILE` writes cleaned text to FILE; the summary line goes to stderr so --json stays valid
-- render.py: loads the page HTML in headless Chromium (Playwright) with ALL network requests blocked, walks every text node, and reports text a human cannot see (display:none, opacity, visibility, font-size, off-screen, clipped, zero-size container, text color = background), attributed to the outermost element using the same label as css_hiding (div#id.class) so findings merge
+- render.py: loads the page HTML in headless Chromium (Playwright) with ALL network requests blocked, walks every text node, and reports text a human cannot see, attributed to the outermost element using the same label as css_hiding (div#id.class) so findings merge
 - Page has an optional hidden_text field (None unless --render); render_diff returns nothing when it is None
 - Playwright is an optional install: `pip install unseen[render]` then `python -m playwright install chromium`
-- Verified: 88 tests passing, ruff clean
+- api.py (FastAPI): GET /health and POST /scan. Body: exactly one of `url` (http/https only) or `html` (max 2,000,000 chars), plus `render`, `sanitize`, `min_severity`. Returns the same JSON as `--json` (target, overall, findings) plus a `sanitized` block when requested
+- API never reads local files (it does not use load_page); url goes through fetcher.fetch
+- API errors: 422 bad input, 502 fetch failed, 503 render unavailable, 429 another render is running (one render at a time via RENDER_LOCK)
+- Run locally: `python -m uvicorn unseen.api:app` (127.0.0.1:8000, docs at /docs). Install: `python -m pip install -e ".[api]"`
+- Verified: 103 tests passing, ruff clean, API tried by hand in the /docs page
 
 ## Known gaps
 - css_hiding ignores external stylesheets and selector specificity (render_diff covers specificity; external stylesheets are not loaded because the browser has no network)
@@ -58,6 +62,9 @@ Target: launch around Nov 10-13 (about 3 days ahead of the compressed plan).
 - Phrase lists are English only
 - No real-site false-positive testing yet (step 12)
 - Page scripts run inside the browser (network blocked, 10 s limit); revisit limits in step 9
+- api.py imports scan_page and overall from cli.py; move them to a shared module later
+- API has no CORS settings yet (needed for the React dev server in step 8), no rate limit and no SSRF guard (step 9): localhost only
+- pytest shows a Starlette warning about httpx vs httpx2 in the test client (harmless)
 
 ## Decisions
 - Environment: Windows, PowerShell, VS Code, venv in `.venv`, ruff line length 100
@@ -68,5 +75,6 @@ Target: launch around Nov 10-13 (about 3 days ahead of the compressed plan).
 - Never put server IPs, keys or tokens in this file
 
 ## Next step
-Step 7: FastAPI POST /scan. It takes a URL (or HTML), runs the same scan as the CLI, and returns the
-JSON the CLI prints. It must reuse scan_page, not copy the logic. No public deploy until net_guard.py (step 9).
+Step 8: React + Tailwind side-by-side UI. Left: the raw page text with the hidden parts highlighted.
+Right: the cleaned text from `sanitize: true`. It calls POST /scan. Needs CORS for the dev server
+(localhost only). Check Node.js is installed first (`node --version`).
