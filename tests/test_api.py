@@ -84,20 +84,42 @@ def test_sanitize_option_returns_cleaned_text():
 
 
 def test_url_scan_goes_through_the_fetcher(monkeypatch):
-    monkeypatch.setattr(api, "fetch", lambda url: Page.from_html(POISONED, url=url))
+    monkeypatch.setattr(api, "fetch", lambda url, **kwargs: Page.from_html(POISONED, url=url))
     data = client.post("/scan", json={"url": "https://example.com"}).json()
     assert data["target"] == "https://example.com"
     assert data["overall"] == "high"
 
 
 def test_fetch_error_gives_502(monkeypatch):
-    def boom(url):
+    def boom(url, **kwargs):
         raise FetchError("boom")
 
     monkeypatch.setattr(api, "fetch", boom)
     response = client.post("/scan", json={"url": "https://example.com"})
     assert response.status_code == 502
     assert "boom" in response.json()["detail"]
+
+
+def test_url_fetches_use_the_ssrf_guard(monkeypatch):
+    captured = {}
+
+    def fake_fetch(url, **kwargs):
+        captured.update(kwargs)
+        return Page.from_html(CLEAN, url=url)
+
+    monkeypatch.setattr(api, "fetch", fake_fetch)
+    client.post("/scan", json={"url": "https://example.com"})
+    assert captured["validator"] is api.URL_VALIDATOR
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["http://127.0.0.1/", "http://localhost/", "http://169.254.169.254/"],
+)
+def test_internal_urls_are_refused_by_the_api(url):
+    response = client.post("/scan", json={"url": url})
+    assert response.status_code == 502
+    assert "non-public" in response.json()["detail"]
 
 
 def test_second_render_gets_429_while_one_is_running():

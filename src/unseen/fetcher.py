@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -14,19 +14,42 @@ MAX_REDIRECTS = 5
 DEFAULT_TIMEOUT = 10.0
 DEFAULT_MAX_BYTES = 2_000_000
 
+# A validator raises FetchError to refuse a URL. It may return the IP addresses it approved;
+# fetch then connects to exactly one of those (this defeats DNS rebinding).
+Validator = Callable[[str], Sequence[str] | None]
+
 
 class FetchError(Exception):
     """Raised when a page cannot be fetched safely."""
 
 
-def check_url(url: str, validator: Callable[[str], None] | None = None) -> None:
+def check_url(url: str, validator: Validator | None = None) -> Sequence[str] | None:
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
         raise FetchError(f"Unsupported URL scheme: {parsed.scheme or 'none'}")
     if not parsed.hostname:
         raise FetchError("URL has no host")
-    if validator is not None:
-        validator(url)
+    if validator is None:
+        return None
+    return validator(url)
+
+
+def pin_request(
+    url: str, addresses: Sequence[str]
+) -> tuple[str, dict[str, str], dict[str, str]]:
+    """Return (url, headers, extensions) that connect to an address that was already checked.
+
+    The host in the URL becomes the IP, the Host header keeps the original name, and the TLS
+    handshake still uses the original name, so certificates are verified as usual.
+    """
+    target = httpx.URL(url)
+    ip = sorted(addresses, key=lambda address: ":" in address)[0]  # prefer IPv4
+    literal = f"[{ip}]" if ":" in ip else ip
+    port = f":{target.port}" if target.port else ""
+    pinned = f"{target.scheme}://{literal}{port}{target.raw_path.decode('ascii')}"
+    headers = {"Host": target.netloc.decode("ascii")}
+    extensions = {"sni_hostname": target.raw_host.decode("ascii")}
+    return pinned, headers, extensions
 
 
 def fetch(
@@ -34,7 +57,7 @@ def fetch(
     *,
     timeout: float = DEFAULT_TIMEOUT,
     max_bytes: int = DEFAULT_MAX_BYTES,
-    validator: Callable[[str], None] | None = None,
+    validator: Validator | None = None,
 ) -> Page:
     """Fetch url and return it as a Page. The validator runs on every hop, redirects included."""
     current = url
@@ -42,9 +65,16 @@ def fetch(
 
     with httpx.Client(timeout=timeout, follow_redirects=False, headers=headers) as client:
         for _ in range(MAX_REDIRECTS + 1):
-            check_url(current, validator)
+            addresses = check_url(current, validator)
+            if addresses:
+                request_url, extra_headers, extensions = pin_request(current, addresses)
+            else:
+                request_url, extra_headers, extensions = current, {}, {}
+
             try:
-                with client.stream("GET", current) as response:
+                with client.stream(
+                    "GET", request_url, headers=extra_headers, extensions=extensions
+                ) as response:
                     if response.is_redirect:
                         location = response.headers.get("location")
                         if not location:

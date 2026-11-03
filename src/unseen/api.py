@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, model_validator
 from unseen.cli import overall, scan_page
 from unseen.detectors.base import Page, Severity
 from unseen.fetcher import FetchError, fetch
+from unseen.net_guard import make_validator
 from unseen.render import RenderError, render_hidden_text
 from unseen.sanitize import sanitize as sanitize_page
 
@@ -18,6 +19,7 @@ MAX_HTML_CHARS = 2_000_000
 
 app = FastAPI(title="unseen", version="0.1.0")
 RENDER_LOCK = threading.Lock()  # only one browser render at a time
+URL_VALIDATOR = make_validator()  # SSRF guard: runs on the first URL and on every redirect
 
 
 class ScanRequest(BaseModel):
@@ -48,7 +50,7 @@ def scan(request: ScanRequest) -> dict:
 
     try:
         if request.url is not None:
-            page = fetch(request.url)
+            page = fetch(request.url, validator=URL_VALIDATOR)
         else:
             page = Page.from_html(request.html or "")
         if request.render:
