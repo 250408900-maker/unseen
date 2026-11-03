@@ -34,6 +34,16 @@ def browser_available() -> bool:
 needs_browser = pytest.mark.skipif(not browser_available(), reason="browser not available")
 
 
+@pytest.fixture(autouse=True)
+def fresh_rate_limits():
+    api.SCAN_LIMITER.reset()
+    api.RENDER_LIMITER.reset()
+
+
+def post_clean(headers=None, render=False):
+    return client.post("/scan", json={"html": CLEAN, "render": render}, headers=headers or {})
+
+
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
@@ -125,7 +135,7 @@ def test_internal_urls_are_refused_by_the_api(url):
 def test_second_render_gets_429_while_one_is_running():
     assert api.RENDER_LOCK.acquire(blocking=False)
     try:
-        response = client.post("/scan", json={"html": CLEAN, "render": True})
+        response = post_clean(render=True)
     finally:
         api.RENDER_LOCK.release()
     assert response.status_code == 429
@@ -136,7 +146,7 @@ def test_render_unavailable_gives_503_and_releases_lock(monkeypatch):
         raise RenderError("no browser")
 
     monkeypatch.setattr(api, "render_hidden_text", broken)
-    response = client.post("/scan", json={"html": CLEAN, "render": True})
+    response = post_clean(render=True)
     assert response.status_code == 503
     assert not api.RENDER_LOCK.locked()
 
@@ -146,3 +156,47 @@ def test_render_catches_specificity_trick():
     data = client.post("/scan", json={"html": SPECIFICITY_TRICK, "render": True}).json()
     assert [f["location"] for f in data["findings"]] == ["p.x"]
     assert data["findings"][0]["detectors"] == ["render_diff"]
+
+
+def test_scans_are_rate_limited_per_visitor():
+    for _ in range(api.SCAN_LIMITER.limit):
+        assert post_clean().status_code == 200
+    response = post_clean()
+    assert response.status_code == 429
+    assert int(response.headers["retry-after"]) > 0
+
+
+def test_renders_have_a_lower_limit_than_plain_scans(monkeypatch):
+    monkeypatch.setattr(api, "render_hidden_text", lambda html: [])
+    for _ in range(api.RENDER_LIMITER.limit):
+        assert post_clean(render=True).status_code == 200
+    assert post_clean(render=True).status_code == 429
+    assert post_clean().status_code == 200  # plain scans still work
+
+
+def test_forwarded_header_is_ignored_unless_the_proxy_is_trusted(monkeypatch):
+    monkeypatch.setattr(api, "TRUST_PROXY", False)
+    for _ in range(api.SCAN_LIMITER.limit):
+        post_clean(headers={"X-Forwarded-For": "1.1.1.1"})
+    assert post_clean(headers={"X-Forwarded-For": "2.2.2.2"}).status_code == 429
+
+
+def test_trusted_proxy_gives_each_visitor_their_own_limit(monkeypatch):
+    monkeypatch.setattr(api, "TRUST_PROXY", True)
+    for _ in range(api.SCAN_LIMITER.limit):
+        post_clean(headers={"X-Forwarded-For": "1.1.1.1"})
+    assert post_clean(headers={"X-Forwarded-For": "1.1.1.1"}).status_code == 429
+    assert post_clean(headers={"X-Forwarded-For": "2.2.2.2"}).status_code == 200
+
+
+def test_ipv6_visitors_in_one_block_share_a_limit(monkeypatch):
+    monkeypatch.setattr(api, "TRUST_PROXY", True)
+    for _ in range(api.SCAN_LIMITER.limit):
+        post_clean(headers={"X-Forwarded-For": "2001:db8::1"})
+    assert post_clean(headers={"X-Forwarded-For": "2001:db8::2"}).status_code == 429
+
+
+def test_oversized_request_body_gets_413():
+    body = b"a" * (api.MAX_BODY_BYTES + 1)
+    response = client.post("/scan", content=body, headers={"content-type": "application/json"})
+    assert response.status_code == 413

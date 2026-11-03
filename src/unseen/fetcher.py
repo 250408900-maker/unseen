@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable, Sequence
 from urllib.parse import urljoin, urlparse
 
@@ -12,6 +13,7 @@ from .detectors.base import Page
 USER_AGENT = "unseen/0.1 (hidden-prompt scanner)"
 MAX_REDIRECTS = 5
 DEFAULT_TIMEOUT = 10.0
+DEFAULT_TOTAL_TIMEOUT = 15.0
 DEFAULT_MAX_BYTES = 2_000_000
 
 # A validator raises FetchError to refuse a URL. It may return the IP addresses it approved;
@@ -56,15 +58,25 @@ def fetch(
     url: str,
     *,
     timeout: float = DEFAULT_TIMEOUT,
+    total_timeout: float = DEFAULT_TOTAL_TIMEOUT,
     max_bytes: int = DEFAULT_MAX_BYTES,
     validator: Validator | None = None,
 ) -> Page:
-    """Fetch url and return it as a Page. The validator runs on every hop, redirects included."""
+    """Fetch url and return it as a Page. The validator runs on every hop, redirects included.
+
+    timeout limits each connect/read; total_timeout limits the whole fetch, redirects included.
+    """
     current = url
+    deadline = time.monotonic() + total_timeout
     headers = {"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"}
 
-    with httpx.Client(timeout=timeout, follow_redirects=False, headers=headers) as client:
+    with httpx.Client(
+        timeout=timeout, follow_redirects=False, headers=headers, trust_env=False
+    ) as client:
         for _ in range(MAX_REDIRECTS + 1):
+            if time.monotonic() > deadline:
+                raise FetchError(f"Fetch took longer than {total_timeout:g} seconds")
+
             addresses = check_url(current, validator)
             if addresses:
                 request_url, extra_headers, extensions = pin_request(current, addresses)
@@ -94,6 +106,8 @@ def fetch(
                         body.extend(chunk)
                         if len(body) > max_bytes:
                             raise FetchError(f"Page is larger than {max_bytes} bytes")
+                        if time.monotonic() > deadline:
+                            raise FetchError(f"Fetch took longer than {total_timeout:g} seconds")
 
                     html = bytes(body).decode(response.encoding or "utf-8", errors="replace")
                     return Page.from_html(html, url=current)

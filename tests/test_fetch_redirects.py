@@ -25,6 +25,16 @@ def ok(request):
     return httpx.Response(200, headers={"content-type": "text/html"}, text="<p>ok</p>")
 
 
+class FakeClock:
+    """Stands in for the time module inside fetcher.py; tests move it by hand."""
+
+    def __init__(self):
+        self.now = 0.0
+
+    def monotonic(self):
+        return self.now
+
+
 @pytest.mark.parametrize(
     "location",
     [
@@ -143,3 +153,50 @@ def test_pin_request_brackets_ipv6_and_uses_punycode_names():
     assert url == f"https://[{PUBLIC_IPV6}]/"
     assert headers["Host"] == "xn--mnchen-3ya.example"
     assert extensions["sni_hostname"] == "xn--mnchen-3ya.example"
+
+
+def test_total_time_limit_stops_a_slow_redirect_chain(monkeypatch):
+    clock = FakeClock()
+    monkeypatch.setattr("unseen.fetcher.time", clock)
+    seen = []
+
+    def handler(request):
+        seen.append(request.headers["host"])
+        clock.now += 20  # this hop alone uses up the whole time budget
+        return httpx.Response(302, headers={"location": "http://other.example/page"})
+
+    use_mock_transport(monkeypatch, handler)
+    with pytest.raises(FetchError, match="longer than"):
+        fetch("http://public.example/", validator=make_validator(resolver), total_timeout=15)
+    assert seen == ["public.example"]  # the second hop was never requested
+
+
+def test_total_time_limit_stops_a_slow_body(monkeypatch):
+    clock = FakeClock()
+    monkeypatch.setattr("unseen.fetcher.time", clock)
+
+    def slow_body():
+        yield b"<p>"
+        clock.now += 20  # the server stalls after the first chunk
+        yield b"slow</p>"
+
+    def handler(request):
+        return httpx.Response(200, headers={"content-type": "text/html"}, content=slow_body())
+
+    use_mock_transport(monkeypatch, handler)
+    with pytest.raises(FetchError, match="longer than"):
+        fetch("http://public.example/", validator=make_validator(resolver), total_timeout=15)
+
+
+def test_client_ignores_proxy_environment(monkeypatch):
+    captured = {}
+    real_client = httpx.Client
+    transport = httpx.MockTransport(ok)
+
+    def fake_client(**kwargs):
+        captured.update(kwargs)
+        return real_client(transport=transport, **kwargs)
+
+    monkeypatch.setattr(httpx, "Client", fake_client)
+    fetch("http://public.example/", validator=make_validator(resolver))
+    assert captured["trust_env"] is False
