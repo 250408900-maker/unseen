@@ -16,7 +16,7 @@ services:
       - "80:80"
       - "9443:443"
     environment:
-      SITE_ADDRESS: unseen-scan.duckdns.org
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./web/dist:/srv:ro
