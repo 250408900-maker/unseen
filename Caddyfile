@@ -1,0 +1,19 @@
+{$SITE_ADDRESS::80} {
+	encode gzip
+
+	request_body {
+		max_size 3MB
+	}
+
+	# /api/scan becomes /scan on the API container (same as the Vite dev proxy).
+	handle_path /api/* {
+		reverse_proxy api:8000
+	}
+
+	# Everything else is the built React app.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
