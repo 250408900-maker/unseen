@@ -118,6 +118,83 @@
         "instruction_patterns"
       ],
       "min_severity": "low"
+    },
+    {
+      "file": "poisoned/css_visibility_hidden.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_text_indent.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_clip_rect.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_clip_path.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_zero_height_overflow.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_transparent_text.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_white_short_hex.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_rgb_white.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/hidden_attribute_instruction.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/css_hidden_parent_nested.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/hidden_non_english.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "low"
     }
   ],
   "clean": [
@@ -127,6 +204,50 @@
     },
     {
       "file": "clean/clean_legit_hiding.html",
+      "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_cookie_banner.html",
+      "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_accordion_hidden_attr.html",
+      "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_noscript_fallback.html",
+      "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_csrf_hidden_input.html",
+      "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_aria_icon_button.html",
+      "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_ignore_in_prose.html",
+      "max_severity": "none"
+    },
+    {
+      "file": "clean/clean_table_page.html",
+      "max_severity": "none"
+    },
+    {
+      "file": "clean/clean_low_contrast_text.html",
+      "max_severity": "none"
+    },
+    {
+      "file": "clean/clean_small_print.html",
+      "max_severity": "none"
+    },
+    {
+      "file": "clean/clean_half_opacity.html",
+      "max_severity": "none"
+    },
+    {
+      "file": "clean/clean_template_element.html",
       "max_severity": "low"
     }
   ]
