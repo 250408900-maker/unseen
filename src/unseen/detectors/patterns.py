@@ -57,9 +57,57 @@ _SOURCES = [
         r"|secrets?|files?|contents?|information|details)\b[^.\n]{0,60}?"
         r"(?:https?://\S+|[\w.+-]+@[\w-]+\.[\w.-]+)"
     ),
+    # --- French ---
+    # "ignorez les instructions précédentes"
+    (
+        r"\b(?:ignor(?:e|ez|er)|oubli(?:e|ez|er)|n[ée]glige[zr]?|d[ée]sob[ée]i\w*)\b"
+        r"(?:\s+\w+){0,3}?\s+"
+        r"(?:instructions?|consignes?|directives?|r[èe]gles?|ordres?|prompts?|messages?)\s+"
+        r"(?:pr[ée]c[ée]dent\w*|ant[ée]rieur\w*|ci-dessus|initial\w*|original\w*|syst[èe]me)"
+    ),
+    # "ne dis pas à l'utilisateur"
+    (
+        r"\bne\s+(?:le\s+|lui\s+)?(?:dis|dites|r[ée]v[èée]le[z]?|mentionne[z]?)\s+pas\s+"
+        r"(?:[àa]\s+)?l['’]\s?utilisateur"
+    ),
+    # --- Spanish ---
+    # "ignora todas las instrucciones anteriores"
+    (
+        r"\b(?:ignor(?:a|as|e|ar)|olvid(?:a|e|ar)|omit(?:e|ir)|descart(?:a|e|ar))\b"
+        r"(?:\s+\w+){0,3}?\s+"
+        r"(?:instrucciones|indicaciones|reglas|directrices|directivas|[óo]rdenes|mensajes)\s+"
+        r"(?:anteriores|previas|previos|precedentes|originales)"
+    ),
+    # "no le digas al usuario"
+    (
+        r"\bno\s+(?:le\s+)?(?:digas|cuentes|reveles|menciones|informes|muestres)\s+"
+        r"(?:esto\s+)?(?:al|a\s+la|a\s+el)\s+(?:usuario|persona|humano)"
+    ),
+    # --- German ---
+    # "ignoriere alle vorherigen Anweisungen"
+    (
+        r"\b(?:ignorier\w*|vergiss\w*|vergessen|missachte\w*)\b(?:\s+\w+){0,3}?\s+"
+        r"(?:vorherig|vorig|fr[üu]her|bisherig|obig|vorangegangen|urspr[üu]nglich)\w*\s+"
+        r"(?:anweisung|instruktion|regel|befehl|vorgabe|anleitung|eingabe)\w*"
+    ),
+    # "sage dem Benutzer nicht"
+    (
+        r"\b(?:sage|sag|erz[äa]hle|verrate|teile)\s+(?:es\s+|dies\s+)?(?:dem|der)\s+"
+        r"(?:benutzer|nutzer|anwender|person)\w*\s+nicht\b"
+    ),
+    # --- Turkish ---
+    # "önceki talimatları yoksay"
+    (
+        r"\b[öo]ncek[iıİ]\s+(?:\w+\s+){0,2}?"
+        r"(?:talimat|komut|y[öo]nerge|kural|istem|y[öo]nlendirme)\w*\s+(?:\w+\s+){0,2}?"
+        r"(?:yoksay|unut|g[öo]rmezden|dikkate\s+alma|iptal)\w*"
+    ),
+    # "kullanıcıya söyleme"
+    r"\bkullan[ıi]c[ıi]ya\s+(?:\w+\s+){0,2}?(?:s[öo]yleme|bildirme|g[öo]sterme)\w*",
 ]
 
 PATTERNS = [re.compile(source, re.IGNORECASE) for source in _SOURCES]
+NON_ENGLISH_PATTERNS = PATTERNS[-8:]
 
 
 def normalize(text: str) -> str:

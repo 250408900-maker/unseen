@@ -229,10 +229,16 @@ POISONED: list[tuple[str, str, list[str], str]] = [
         ["css_hiding"],
         "high",
     ),
-    (
+            (
         "hidden_non_english",
-        page(f'{INTRO}\n<div style="display:none">{FRENCH}</div>'),
+        page(f'{INTRO}\n<div style="display:none;opacity:0">{FRENCH}</div>'),
         ["css_hiding"],
+        "high",
+    ),
+    (
+        "visible_non_english",
+        page(f"{INTRO}\n<p>{FRENCH}</p>"),
+        ["instruction_patterns"],
         "low",
     ),
 ]

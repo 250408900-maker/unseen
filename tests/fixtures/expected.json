@@ -194,6 +194,13 @@
       "detectors": [
         "css_hiding"
       ],
+      "min_severity": "high"
+    },
+    {
+      "file": "poisoned/visible_non_english.html",
+      "detectors": [
+        "instruction_patterns"
+      ],
       "min_severity": "low"
     }
   ],

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from bs4.element import Comment
 
 from .base import Detector, Finding, Page, Severity, clip, describe, register
-from .patterns import normalize
+from .patterns import NON_ENGLISH_PATTERNS, normalize
 
 MODE_NAMES = (
     r"developer|admin|administrator|debug|god|sudo|dan|jailbreak|unrestricted|unfiltered"
@@ -87,6 +87,23 @@ def detect_instruction_patterns(text: str) -> list[InstructionMatch]:
                         end=match.end(),
                     )
                 )
+
+    # Phrases in other languages (French, Spanish, German, Turkish) from the shared list.
+    covered = [(item.start, item.end) for item in findings]
+    for expression in NON_ENGLISH_PATTERNS:
+        for match in expression.finditer(text):
+            if any(start < match.end() and match.start() < end for start, end in covered):
+                continue
+            covered.append((match.start(), match.end()))
+            findings.append(
+                InstructionMatch(
+                    category="instruction_phrase",
+                    text=match.group(0),
+                    severity="medium",
+                    start=match.start(),
+                    end=match.end(),
+                )
+            )
 
     return sorted(findings, key=lambda item: item.start)
 
