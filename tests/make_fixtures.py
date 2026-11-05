@@ -221,15 +221,13 @@ POISONED: list[tuple[str, str, list[str], str]] = [
         ["css_hiding"],
         "high",
     ),
-         (
+    (
         "css_hidden_parent_nested",
-        page(
-            f'{INTRO}\n<div style="display:none;opacity:0"><p><b>{PAYLOAD}</b></p></div>'
-        ),
+        page(f'{INTRO}\n<div style="display:none;opacity:0"><p><b>{PAYLOAD}</b></p></div>'),
         ["css_hiding"],
         "high",
     ),
-            (
+    (
         "hidden_non_english",
         page(f'{INTRO}\n<div style="display:none;opacity:0">{FRENCH}</div>'),
         ["css_hiding"],
@@ -240,6 +238,12 @@ POISONED: list[tuple[str, str, list[str], str]] = [
         page(f"{INTRO}\n<p>{FRENCH}</p>"),
         ["instruction_patterns"],
         "low",
+    ),
+    (
+        "css_display_none_parent_plain",
+        page(f'{INTRO}\n<div style="display:none"><p><b>{PAYLOAD}</b></p></div>'),
+        ["css_hiding"],
+        "high",
     ),
 ]
 

@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from .base import Detector, Finding, Page, Severity, clip, describe, register
+from .instruction_patterns import detect_instruction_patterns
 
 SKIP_TAGS = {"script", "style", "noscript", "template", "head", "title", "meta", "link"}
 
@@ -181,11 +182,17 @@ class CssHiding(Detector):
             else:
                 severity = Severity.LOW
 
+            message = f"Hidden from humans via {', '.join(reasons)}"
+            # An instruction anywhere inside hidden content (children included) is HIGH.
+            if detect_instruction_patterns(text):
+                severity = Severity.HIGH
+                message += " (contains instruction-like text)"
+
             findings.append(
                 Finding(
                     detector=self.name,
                     severity=severity,
-                    message=f"Hidden from humans via {', '.join(reasons)}",
+                    message=message,
                     location=describe(tag),
                     snippet=clip(text),
                 )

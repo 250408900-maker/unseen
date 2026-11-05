@@ -202,6 +202,13 @@
         "instruction_patterns"
       ],
       "min_severity": "low"
+    },
+    {
+      "file": "poisoned/css_display_none_parent_plain.html",
+      "detectors": [
+        "css_hiding"
+      ],
+      "min_severity": "high"
     }
   ],
   "clean": [
