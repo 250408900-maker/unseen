@@ -46,7 +46,9 @@ def main() -> int:
         if ok:
             detected += 1
         else:
-            failures.append(f"MISSED  {item['file']} (expected {item['detectors']} >= {item['min_severity']})")
+            failures.append(
+                f"MISSED  {item['file']} (expected {item['detectors']} >= {item['min_severity']})"
+            )
 
     false_positives = 0
     for item in manifest["clean"]:
@@ -56,7 +58,9 @@ def main() -> int:
         too_loud = top is not None and (limit is None or top > limit)
         if too_loud:
             false_positives += 1
-            failures.append(f"FALSE POSITIVE  {item['file']} ({top.name.lower()}, allowed {allowed})")
+            failures.append(
+                f"FALSE POSITIVE  {item['file']} ({top.name.lower()}, allowed {allowed})"
+            )
 
     poisoned_total = len(manifest["poisoned"])
     clean_total = len(manifest["clean"])
