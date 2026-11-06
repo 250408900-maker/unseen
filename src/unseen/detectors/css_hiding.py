@@ -162,7 +162,7 @@ def is_skip_link(tag: Tag, text: str) -> bool:
 def is_ordinary_reason(reason: str, reasons: list[str], tag: Tag, text: str) -> bool:
     if reason in ORDINARY:
         return True
-    short = len(text) < 20
+    short = len(text) < 60
     if short and reason in SCREEN_READER:
         return True
     # A closed dropdown or accordion: collapsed to zero size AND hidden the usual way.

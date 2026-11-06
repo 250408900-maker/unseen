@@ -275,6 +275,10 @@
     {
       "file": "clean/clean_closed_dropdown.html",
       "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_sr_only_label.html",
+      "max_severity": "low"
     }
   ]
 }
