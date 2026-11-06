@@ -263,6 +263,10 @@
     {
       "file": "clean/clean_template_element.html",
       "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_sr_only_short.html",
+      "max_severity": "low"
     }
   ]
 }

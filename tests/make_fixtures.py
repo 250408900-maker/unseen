@@ -350,6 +350,15 @@ CLEAN: list[tuple[str, str, str]] = [
         page(f"{INTRO}\n<template><li>List item shown by a script</li></template>"),
         "low",
     ),
+    (
+        "clean_sr_only_short",
+        page(
+            f"{INTRO}\n"
+            '<span style="position:absolute;width:1px;height:1px;overflow:hidden;'
+            'clip:rect(0,0,0,0)">Skip to content</span>'
+        ),
+        "low",
+    ),
 ]
 
 

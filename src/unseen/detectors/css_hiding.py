@@ -15,6 +15,9 @@ SKIP_TAGS = {"script", "style", "noscript", "template", "head", "title", "meta",
 # Common on legitimate pages (menus, modals), so they score lower than deceptive tricks.
 ORDINARY = {"hidden attribute", "display:none", "visibility:hidden"}
 
+# Screen-reader-only text uses these. With very short text they cannot carry an attack.
+SCREEN_READER = {"clipped to nothing", "zero-size container"}
+
 NAMED_COLORS = {
     "white": (255, 255, 255),
     "black": (0, 0, 0),
@@ -176,7 +179,12 @@ class CssHiding(Detector):
                 continue
 
             flagged.add(id(tag))
-            deceptive = [r for r in reasons if r not in ORDINARY]
+            short = len(text) < 20
+            deceptive = [
+                r
+                for r in reasons
+                if r not in ORDINARY and not (short and r in SCREEN_READER)
+            ]
             if deceptive:
                 severity = Severity.HIGH if len(text) >= 20 else Severity.MEDIUM
             else:
