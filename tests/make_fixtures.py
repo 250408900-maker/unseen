@@ -359,6 +359,24 @@ CLEAN: list[tuple[str, str, str]] = [
         ),
         "low",
     ),
+    (
+        "clean_skip_link",
+        page(
+            '<a href="#main" style="position:absolute;left:-9999px">Skip to content</a>\n'
+            f"{INTRO}"
+        ),
+        "low",
+    ),
+    (
+        "clean_closed_dropdown",
+        page(
+            f"{INTRO}\n"
+            '<div style="visibility:hidden;height:0;overflow:hidden">'
+            "<p>Read this site in English, Spanish, French, German, Turkish and Arabic.</p>"
+            "</div>"
+        ),
+        "low",
+    ),
 ]
 
 

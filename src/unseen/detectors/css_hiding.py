@@ -18,6 +18,9 @@ ORDINARY = {"hidden attribute", "display:none", "visibility:hidden"}
 # Screen-reader-only text uses these. With very short text they cannot carry an attack.
 SCREEN_READER = {"clipped to nothing", "zero-size container"}
 
+# A closed dropdown or accordion: hidden with display/visibility AND collapsed to zero size.
+COLLAPSE_HIDERS = {"display:none", "visibility:hidden", "hidden attribute"}
+
 NAMED_COLORS = {
     "white": (255, 255, 255),
     "black": (0, 0, 0),
@@ -151,6 +154,26 @@ def hiding_reasons(tag: Tag, style: dict[str, str]) -> list[str]:
     return reasons
 
 
+def is_skip_link(tag: Tag, text: str) -> bool:
+    """A short in-page anchor such as 'Skip to content' (href starting with #)."""
+    return tag.name == "a" and str(tag.get("href", "")).startswith("#") and len(text) < 40
+
+
+def is_ordinary_reason(reason: str, reasons: list[str], tag: Tag, text: str) -> bool:
+    if reason in ORDINARY:
+        return True
+    short = len(text) < 20
+    if short and reason in SCREEN_READER:
+        return True
+    # A closed dropdown or accordion: collapsed to zero size AND hidden the usual way.
+    if reason == "zero-size container" and any(r in COLLAPSE_HIDERS for r in reasons):
+        return True
+    # Skip links are moved off-screen until they receive focus.
+    if reason == "off-screen position" and is_skip_link(tag, text):
+        return True
+    return False
+
+
 @register
 class CssHiding(Detector):
     name = "css_hiding"
@@ -179,12 +202,7 @@ class CssHiding(Detector):
                 continue
 
             flagged.add(id(tag))
-            short = len(text) < 20
-            deceptive = [
-                r
-                for r in reasons
-                if r not in ORDINARY and not (short and r in SCREEN_READER)
-            ]
+            deceptive = [r for r in reasons if not is_ordinary_reason(r, reasons, tag, text)]
             if deceptive:
                 severity = Severity.HIGH if len(text) >= 20 else Severity.MEDIUM
             else:

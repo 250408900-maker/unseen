@@ -267,6 +267,14 @@
     {
       "file": "clean/clean_sr_only_short.html",
       "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_skip_link.html",
+      "max_severity": "low"
+    },
+    {
+      "file": "clean/clean_closed_dropdown.html",
+      "max_severity": "low"
     }
   ]
 }
