@@ -7,6 +7,8 @@ When an AI agent browses the web, it reads the page's HTML, not the pixels a per
 **Live demo:** https://unseen-scan.duckdns.org:9443
 (It runs on a small free server with rate limits, so it may be slow or offline. Note the `:9443` port.)
 
+**PyPI:** https://pypi.org/project/unseen/
+
 ## What it detects
 
 Six detectors, each reporting a severity (low, medium, high). Findings at the same location are merged, and a hiding trick plus an instruction at the same place is always HIGH.
@@ -23,15 +25,20 @@ Six detectors, each reporting a severity (low, medium, high). Findings at the sa
 ## Install
 
 ```
-pip install -e .
+pip install unseen
 ```
 
 Optional extras:
 
 ```
-pip install -e ".[render]"     # headless browser check
+pip install "unseen[render]"   # headless browser check
 python -m playwright install chromium
-pip install -e ".[api]"        # FastAPI server
+pip install "unseen[api]"      # FastAPI server
+```
+
+For development, clone the repo and install it in editable mode:
+
+```
 pip install -e ".[dev]"        # tests and linting
 ```
 
